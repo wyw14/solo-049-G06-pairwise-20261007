@@ -46,15 +46,6 @@ func (r *Runtime) applyRFPlan(writer http.ResponseWriter, request *http.Request)
 	writeJSON(writer, http.StatusOK, state)
 }
 
-func (r *Runtime) enableTransmit(writer http.ResponseWriter, request *http.Request) {
-	if err := r.RF.EnableTransmit(chi.URLParam(request, "chainID")); err != nil {
-		writeError(writer, err)
-		return
-	}
-	state, _ := r.RF.State(chi.URLParam(request, "chainID"))
-	writeJSON(writer, http.StatusOK, state)
-}
-
 func (r *Runtime) executeDuePointing(writer http.ResponseWriter, _ *http.Request) {
 	commands, err := r.Executor.RunDue(time.Now().UTC())
 	if err != nil {
