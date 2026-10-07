@@ -15,6 +15,7 @@ import (
 	"orbitlink/internal/receiver"
 	"orbitlink/internal/recorder"
 	"orbitlink/internal/rf"
+	"orbitlink/internal/rfsafety"
 	"orbitlink/internal/satellite"
 	"orbitlink/internal/scheduler"
 	"orbitlink/internal/store"
@@ -37,6 +38,7 @@ type Runtime struct {
 	Executor         *antenna.Executor
 	Stower           *antenna.StowController
 	RF               *rf.Controller
+	Tickets          *rfsafety.Orchestrator
 	Recorder         *recorder.Manager
 	Passes           *passsvc.Service
 	WindowRecompute  *passsvc.WindowRecomputer
@@ -115,12 +117,16 @@ func NewRuntime(stateRoot string) (*Runtime, error) {
 	handovers := handover.NewCoordinator(recordingState, recorderManager, trail)
 	stower := antenna.NewStowController(fleet, trail)
 	weatherCoordinator := weather.NewCoordinator(20, rfController, stower, passes, trail)
+	tickets, err := rfsafety.NewOrchestrator(paths, trail, passes, fleet, rfController, clockService.Now)
+	if err != nil {
+		return nil, err
+	}
 	runtime := &Runtime{
 		StateRoot: stateRoot, Paths: paths, EventLog: log, Audit: trail, Catalog: catalog, Ephemerides: ephemerides,
 		Clock: clockService, Windows: windows, Timeline: timeline, Commands: commands,
 		Reservations: scheduler.NewReservationPlanner(windows, timeline, 30*time.Second),
 		Antennas:     fleet, Executor: antenna.NewExecutor(fleet, commands, trail), Stower: stower,
-		RF: rfController, Recorder: recorderManager, Passes: passes, WindowRecompute: windowRecompute,
+		RF: rfController, Tickets: tickets, Recorder: recorderManager, Passes: passes, WindowRecompute: windowRecompute,
 		Replanner: replanner, Extensions: extensions, Deadlines: deadlines, Unlocker: unlocker,
 		Finalizer: finalizer, Attempts: attempts, RecordingState: recordingState,
 		Handovers: handovers, Weather: weatherCoordinator, receiverSessions: make(map[string]*receiver.Session),
